@@ -1,85 +1,33 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 
-# Function to rotate an image
 def rotate_image(image, angle):
-    rows, cols = image.shape
-    M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
-    return cv2.warpAffine(image, M, (cols, rows))
+    center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated_image = cv2.warpAffine(image, rot_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return rotated_image
 
-# Function to resize an image
-def resize_image(image, scale):
-    return cv2.resize(image, (int(image.shape[1] * scale), int(image.shape[0] * scale)))
+img = cv2.imread('Images/mario.png')
+template = cv2.imread('Images/mario_coin3.png')
+template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+h, w = template_gray.shape
 
-# Load the image
-img_rgb = cv2.imread('./Images/messi5.jpg')
+img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-# Convert it to grayscale
-img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
+angles_to_check = [0, 90, 180, 270]
 
-# Load the template
-template = cv2.imread('./Images/Template.jpg', 0)
+for angle in angles_to_check:
+    rotated_template = rotate_image(template_gray, angle)
 
-# Store width and height of the template
-w, h = template.shape[::-1]
+    cv2.imshow(f'Rotated Template (Angle: {angle})', rotated_template)
 
-# Original template matching
-res_original = cv2.matchTemplate(img_gray, template, cv2.TM_CCOEFF_NORMED)
-min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res_original)
-top_left = max_loc
-bottom_right = (top_left[0] + w, top_left[1] + h)
-cv2.rectangle(img_rgb, top_left, bottom_right, (0, 255, 0), 2)
+    res = cv2.matchTemplate(img_gray, rotated_template, cv2.TM_CCOEFF_NORMED)
+    threshold = 0.7
+    loc = np.where(res >= threshold)
 
-# Display the original template matching result
-plt.subplot(331), plt.imshow(res_original, cmap='gray')
-plt.title('Original Matching Result'), plt.xticks([]), plt.yticks([])
-plt.subplot(332), plt.imshow(img_rgb, cmap='gray')
-plt.title('Original Detected Point'), plt.xticks([]), plt.yticks([])
+    for pt in zip(*loc[::-1]):
+        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
 
-# Rotation variant template matching
-for angle in range(-45, 46, 15):
-    rotated_template = rotate_image(template, angle)
-    res_rotation = cv2.matchTemplate(img_gray, rotated_template, cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res_rotation)
-    top_left = max_loc
-    bottom_right = (top_left[0] + w, top_left[1] + h)
-    cv2.rectangle(img_rgb, top_left, bottom_right, (0, 255, 0), 2)
-
-# Display the rotation variant template matching result
-plt.subplot(333), plt.imshow(res_rotation, cmap='gray')
-plt.title('Rotation Variant Matching Result'), plt.xticks([]), plt.yticks([])
-plt.subplot(334), plt.imshow(img_rgb, cmap='gray')
-plt.title('Rotation Variant Detected Point'), plt.xticks([]), plt.yticks([])
-
-# Scale variant template matching
-for scale in np.linspace(0.5, 2.0, 5):
-    scaled_template = resize_image(template, scale)
-    res_scale = cv2.matchTemplate(img_gray, scaled_template, cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res_scale)
-    top_left = max_loc
-    bottom_right = (top_left[0] + w, top_left[1] + h)
-    cv2.rectangle(img_rgb, top_left, bottom_right, (0, 255, 0), 2)
-
-# Display the scale variant template matching result
-plt.subplot(335), plt.imshow(res_scale, cmap='gray')
-plt.title('Scale Variant Matching Result'), plt.xticks([]), plt.yticks([])
-plt.subplot(336), plt.imshow(img_rgb, cmap='gray')
-plt.title('Scale Variant Detected Point'), plt.xticks([]), plt.yticks([])
-
-# Multi-object detection
-threshold = 0.8
-locations = np.where(res_original >= threshold)
-
-for pt in zip(*locations[::-1]):
-    bottom_right = (pt[0] + w, pt[1] + h)
-    cv2.rectangle(img_rgb, pt, bottom_right, (0, 255, 0), 2)
-
-# Display the multi-object detection result
-plt.subplot(337), plt.imshow(res_original, cmap='gray')
-plt.title('Multi-Object Detection Result'), plt.xticks([]), plt.yticks([])
-plt.subplot(338), plt.imshow(img_rgb, cmap='gray')
-plt.title('Multi-Object Detected Points'), plt.xticks([]), plt.yticks([])
-
-# Show all plots
-plt.show()
+cv2.imshow('Template Matching with Rotation (cv2.TM_CCOEFF_NORMED)', img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
