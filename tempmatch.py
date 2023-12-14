@@ -7,8 +7,8 @@ def rotate_image(image, angle):
     rotated_image = cv2.warpAffine(image, rot_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
     return rotated_image
 
-img = cv2.imread('Images/mario.png')
-template = cv2.imread('Images/mario_coin3.png')
+img = cv2.imread('Images/soccer_practice.jpg')
+template = cv2.imread('Images/ball.PNG')
 template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 h, w = template_gray.shape
 
