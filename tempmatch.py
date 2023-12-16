@@ -1,33 +1,26 @@
-import cv2
+import cv2 
+import matplotlib.pyplot as plt
 import numpy as np
 
-def rotate_image(image, angle):
-    center = tuple(np.array(image.shape[1::-1]) / 2)
-    rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated_image = cv2.warpAffine(image, rot_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    return rotated_image
+img1 = cv2.imread('./Images/soccer_practice.jpg')
+img2 = cv2.imread('./Images/rotated_ball.png')  
+gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+                     
+sift = cv2.SIFT_create()
+keypoints_1, descriptors_1 = sift.detectAndCompute(img1, None)
+keypoints_2, descriptors_2 = sift.detectAndCompute(img2, None)
 
-img = cv2.imread('Images/soccer_practice.jpg')
-template = cv2.imread('Images/ball.PNG')
-template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-h, w = template_gray.shape
+if descriptors_2 is not None:
+    descriptors_1 = descriptors_1.astype(np.float32)
+    descriptors_2 = descriptors_2.astype(np.float32)
 
-img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
 
-angles_to_check = [0, 90, 180, 270]
+    matches = bf.match(descriptors_1, descriptors_2)
+    matches = sorted(matches, key=lambda x: x.distance)
 
-for angle in angles_to_check:
-    rotated_template = rotate_image(template_gray, angle)
-
-    cv2.imshow(f'Rotated Template (Angle: {angle})', rotated_template)
-
-    res = cv2.matchTemplate(img_gray, rotated_template, cv2.TM_CCOEFF_NORMED)
-    threshold = 0.7
-    loc = np.where(res >= threshold)
-
-    for pt in zip(*loc[::-1]):
-        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-
-cv2.imshow('Template Matching with Rotation (cv2.TM_CCOEFF_NORMED)', img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    img3 = cv2.drawMatches(img1, keypoints_1, img2, keypoints_2, matches[:50], img2, flags=2)
+    plt.imshow(img3), plt.show()
+else:
+    print("Feature detection and computation failed for the second image.")
